@@ -45,6 +45,7 @@ object BaumWelchAlgorithm {
           .withColumn("prior", udf_newPi(col("fwdback")))
           .withColumn("transmat", udf_newA(col("fwdback")))
           .withColumn("obsmat", udf_newB(col("fwdback")))
+          .withColumn("durmat", udf_newP(col("fwdback")))
           .drop("workitem", "str_obs", "M", "k", "D", "Pi", "A", "B", "P", "obs", "T", "obslik", "fwdback")
           .reduce((row1, row2) =>
             Row(row1.getAs[Double](0) + row2.getAs[Double](0),
@@ -101,29 +102,8 @@ object BaumWelchAlgorithm {
       .withColumn("T", udf_obssize(col("obs")))
       .withColumn("obslik", udf_multinomialprob(col("obs"), col("M"), col("k"), col("T"), col("B")))
       .withColumn("prob", udf_fwd(col("M"), col("D"), col("T"), col("Pi"), col("A"), col("P"), col("obslik")))
-      .drop("str_obs", "M", "k", "Pi", "A", "B", "obs", "T", "obslik")
+      .drop("str_obs", "M", "k", "D", "Pi", "A", "B", "P", "obs", "T", "obslik")
   }
-
-  val udf_fwd: UserDefinedFunction = udf((M: Int, D: Int, T: Int, Pi: Seq[Double], A: Seq[Double], P: Seq[Double], obslik: Seq[Double]) => {
-
-    val funPi: DenseVector[Double] = new DenseVector(Pi.toArray)
-    val funA: DenseMatrix[Double] = new DenseMatrix(M, M, A.toArray)
-    val funP: DenseMatrix[Double] = new DenseMatrix(M, D, P.toArray)
-    val funObslik: DenseMatrix[Double] = new DenseMatrix(M, T, obslik.toArray)
-
-    var prob = 0.0
-    (0 until T).foreach(s1 => {
-      prob = funPi(0)
-      (s1 + 1 until M).foreach(n => {
-        var temp = 1.0
-        (0 until n).foreach(t => {
-          temp = temp * funObslik(n, t)
-        })
-        prob = prob * funA(n-1, n) * funP(n, n) * temp
-      })
-    })
-    prob
-  })
 
   /*** udf functions ****/
   val udf_toarray: UserDefinedFunction = udf((s: String) => s.split(";").map(_.toInt))
@@ -285,13 +265,97 @@ object BaumWelchAlgorithm {
     (loglik, newPi.toArray, newA.toArray, newB.toArray, newP.toArray)
   })
 
-
-
-
   val udf_loglik: UserDefinedFunction = udf((input: Row) => input.get(0).asInstanceOf[Double])
   val udf_newPi: UserDefinedFunction = udf((input: Row) => input.get(1).asInstanceOf[Seq[Double]])
   val udf_newA: UserDefinedFunction = udf((input: Row) => input.get(2).asInstanceOf[Seq[Double]])
   val udf_newB: UserDefinedFunction = udf((input: Row) => input.get(3).asInstanceOf[Seq[Double]])
   val udf_newP: UserDefinedFunction = udf((input: Row) => input.get(4).asInstanceOf[Seq[Double]])
+
+  /*** Por optimizar ****/
+  val udf_fwd: UserDefinedFunction = udf((M: Int, D: Int, T: Int, Pi: Seq[Double], A: Seq[Double], P: Seq[Double], obslik: Seq[Double]) => {
+
+    val funPi: DenseVector[Double] = new DenseVector(Pi.toArray)
+    val funA: DenseMatrix[Double] = new DenseMatrix(M, M, A.toArray)
+    val funP: DenseMatrix[Double] = new DenseMatrix(M, D, P.toArray)
+    val funObslik: DenseMatrix[Double] = new DenseMatrix(M, T, obslik.toArray)
+
+    /**
+      * Matriz u(t,j,d)
+      */
+    val matrixu: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
+      DenseMatrix.ones[Double](M, D)
+    }
+    (0 until T).foreach(t =>
+      (0 until M).foreach(j =>
+        (0 until Math.min(T, D)).foreach(d =>
+          (t - d to t).foreach(tau => matrixu(t)(j, d) = matrixu(t)(j, d) * funObslik(j, tau)))))
+
+    /**
+      * Forwards variables
+      */
+    val scale: DenseVector[Double] = DenseVector.ones[Double](T)
+    val alpha: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
+    val alphaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
+
+    alphaprime(::, 0) := normalize(funPi, 1.0)
+    (0 until T).foreach(t => {
+      (0 until M).foreach(j =>
+        (0 until Math.min(T, D)).foreach(d =>
+          alpha(j, t) = alpha(j, t) + (alphaprime(j, t - d) * funP(j, d) * matrixu(t)(j, d))))
+      alpha(::, t) := Utils.normalise(alpha(::, t), scale, t)
+      alphaprime(::, t + 1) := normalize((alpha(::, t).t * funA).t, 1.0)
+    })
+    val loglik: Double = sum(scale.map(Math.log))
+
+    /**
+      * Backwards variables
+      */
+    val beta: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
+    val betaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
+    beta(::, T - 1) := 1.0
+    for (t <- T - 2 to 0 by -1) {
+      (0 until M).foreach(j =>
+        (0 until Math.min(T - t, D)).foreach(d =>
+          betaprime(j, t + 1) = betaprime(j, t + 1) + funP(j, d) * matrixu(t + d)(j, d) * beta(j, t + d)))
+      betaprime(::, t + 1) := normalize(betaprime(::, t + 1), 1.0)
+      beta(::, t) := normalize(funA * betaprime(::, t + 1), 1.0)
+    }
+
+    /**
+      * Matriz n(t,i,d)
+      */
+    val matrixn: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
+      DenseMatrix.ones[Double](M, D)
+    }
+    (0 until T).foreach(t =>
+      (0 until M).foreach(i => {
+        (0 until Math.min(T, D)).foreach(d =>
+          matrixn(t)(i, d) = alphaprime(i, t - d) * funP(i, d) * matrixu(t)(i, d) * beta(i, t))
+        matrixn(t)(i, ::) := normalize(matrixn(t)(i, ::).t, 1.0).t
+      }))
+
+    /**
+      * Matriz xi(t,i,j)
+      */
+    val matrixi: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
+      DenseMatrix.ones[Double](M, M)
+    }
+    (0 until T).foreach(t =>
+      matrixi(t) = Utils.mkstochastic(tile(alpha(::, t), 1, M) :* funA :* tile(betaprime(::, t + 1).t, 1, M)))
+
+    /**
+      * Matriz gamma(t, i)
+      */
+    val matrixg: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
+    matrixg(::, 0) := normalize(funPi :* betaprime(::, 0), 1.0)
+    matrixg(::, T - 1) := normalize(alpha(::, T - 1), 1.0)
+    (1 until T - 1).foreach(t =>
+      matrixg(::, t) := normalize(matrixg(::, t - 1) + alphaprime(::, t) :* betaprime(::, t) + alpha(::, t - 1) :* beta(::, t - 1), 1.0))
+
+    sum(matrixg(::, T - 1))
+
+  })
+
+
 
 }
