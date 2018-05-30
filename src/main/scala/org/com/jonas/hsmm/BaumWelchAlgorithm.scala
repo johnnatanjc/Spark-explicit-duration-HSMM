@@ -149,7 +149,7 @@ object BaumWelchAlgorithm {
       */
     val scale: DenseVector[Double] = DenseVector.ones[Double](T)
     val alpha: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
-    val alphaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
+    val alphaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T + 1)
 
     alphaprime(::, 0) := normalize(funPi, 1.0)
     (0 until T).foreach(t => {
