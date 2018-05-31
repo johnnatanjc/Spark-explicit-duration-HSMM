@@ -165,9 +165,9 @@ object BaumWelchAlgorithm {
       * Backwards variables
       */
     val beta: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
-    val betaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
+    val betaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T + 1)
     beta(::, T - 1) := 1.0
-    for (t <- T - 2 to 0 by -1) {
+    for (t <- T - 1 to 0 by -1) {
       (0 until M).foreach(j =>
         (0 until Math.min(T - t, D)).foreach(d =>
           betaprime(j, t + 1) = betaprime(j, t + 1) + funP(j, d) * matrixu(t + d)(j, d) * beta(j, t + d)))
@@ -258,8 +258,8 @@ object BaumWelchAlgorithm {
     val newPi = DenseVector.zeros[Double](M)
     (0 until M).foreach(i => {
       var den = 0.0
-      (0 until M).foreach(j => den = den + matrixg(0, j))
-      newPi(i) = matrixg(0, i) / den
+      (0 until M).foreach(j => den = den + matrixg(j, 0))
+      newPi(i) = matrixg(i, 0) / den
     })
     newPi := normalize(newPi, 1.0)
     (loglik, newPi.toArray, newA.toArray, newB.toArray, newP.toArray)
