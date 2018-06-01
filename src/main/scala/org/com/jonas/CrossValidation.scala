@@ -102,82 +102,132 @@ object CrossValidation {
       sampleClass0 = set_folds(sampleClass0, nClass0, k_folds)
       sampleClass0.write.format("com.databricks.spark.csv").save(applicationProps.getProperty("path_sample_Class0_folds"))
 
-      hsmm.Utils.writeresult(applicationProps.getProperty("path_result"), "N,TP,FP,FN,TN,sensitivity,specificity,efficiency,error \n")
+      hsmm.Utils.writeresult(applicationProps.getProperty("path_result"), "N,TP,FP,FN,TN,sensitivity,specificity,efficiency,error\n")
+      hsmm.Utils.writeresult(applicationProps.getProperty("path_result_Class1_models"), "kfold;M;k;D;Pi;A;B;P\n")
+      hsmm.Utils.writeresult(applicationProps.getProperty("path_result_Class0_models"), "kfold;M;k;D;Pi;A;B;P\n")
     }
     sampleClass1.persist()
     sampleClass0.persist()
 
-    (inIter until k_folds).foreach(iter => {
+    (inIter until k_folds).foreach(inter => {
       log.info("*****************************************************************************************")
-      log.info("Fold number: " + iter)
+      log.info("Fold number: " + inter)
       log.info("Getting data to train Class 1")
-      val trainClass1 = sampleClass1.where("kfold <> " + iter).drop("kfold", "rowId")
+      val trainClass1 = sampleClass1.where("kfold <> " + inter).drop("kfold", "rowId")
       log.info("Getting data to train Class 0")
-      val trainClass0 = sampleClass0.where("kfold <> " + iter).drop("kfold", "rowId")
+      val trainClass0 = sampleClass0.where("kfold <> " + inter).drop("kfold", "rowId")
       log.info("Getting data to validate Class 1")
-      val validClass1 = sampleClass1.where("kfold == " + iter).drop("kfold", "rowId")
+      val validClass1 = sampleClass1.where("kfold == " + inter).drop("kfold", "rowId")
       log.info("Getting data to validate Class 0")
-      val validClass0 = sampleClass0.where("kfold == " + iter).drop("kfold", "rowId")
-
-      log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-      log.info("Start training Class 1")
-
-      trainClass1.show()
-
-      val modelClass1 = hsmm.BaumWelchAlgorithm.run1(trainClass1, value_M, value_k, value_D,
-        normalize(DenseVector.rand(value_M), 1.0),
-        hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_M)),
-        hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_k)),
-        hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_D)),
-        number_partitions, value_epsilon, max_num_iterations)
-
-      hsmm.Utils.writeresult(applicationProps.getProperty("path_result_Class1_models"),
-        iter + ";" +
-          value_M + ";" +
-          value_k + ";" +
-          modelClass1._1.toArray.mkString(",") + ";" +
-          modelClass1._2.toArray.mkString(",") + ";" +
-          modelClass1._3.toArray.mkString(",") + "\n")
-
+      val validClass0 = sampleClass0.where("kfold == " + inter).drop("kfold", "rowId")
       log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      log.info("Start training Class 0")
-      val modelClass0 = hsmm.BaumWelchAlgorithm.run1(trainClass0, value_M, value_k, value_D,
-        normalize(DenseVector.rand(value_M), 1.0),
-        hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_M)),
-        hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_k)),
-        hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_D)),
-        number_partitions, value_epsilon, max_num_iterations)
+      var modelClass1 = (Array.empty[Double], Array.empty[Double], Array.empty[Double], Array.empty[Double])
+      var modelClass0 = (Array.empty[Double], Array.empty[Double], Array.empty[Double], Array.empty[Double])
 
-      hsmm.Utils.writeresult(applicationProps.getProperty("path_result_Class0_models"),
-        iter + ";" +
-          value_M + ";" +
-          value_k + ";" +
-          modelClass0._1.toArray.mkString(",") + ";" +
-          modelClass0._2.toArray.mkString(",") + ";" +
-          modelClass0._3.toArray.mkString(",") + "\n")
+      if (scala.io.Source.fromFile(applicationProps.getProperty("path_result_Class1_models")).getLines.size == inter + 2) {
+        log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        log.info("Start Load Model Class 1")
+        val stringModel: List[String] = scala.io.Source.fromFile(applicationProps.getProperty("path_result_Class1_models")).getLines().toList
+        val arraymodel = stringModel.last.split(";")
+        modelClass1 = (arraymodel(3).split(",").map(_.toDouble),
+          arraymodel(4).split(",").map(_.toDouble),
+          arraymodel(5).split(",").map(_.toDouble),
+          arraymodel(6).split(",").map(_.toDouble))
+        log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+      }else{
+        log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        log.info("Start training Class 1")
+        val tmpModelClass1 = hsmm.BaumWelchAlgorithm.run1(trainClass1, value_M, value_k, value_D,
+          normalize(DenseVector.rand(value_M), 1.0),
+          hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_M)),
+          hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_k)),
+          hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_D)),
+          number_partitions, value_epsilon, max_num_iterations,
+          inter, applicationProps.getProperty("path_result_Class1_models_baumwelch"))
+
+        modelClass1 = (tmpModelClass1._1.toArray, tmpModelClass1._2.toArray, tmpModelClass1._3.toArray, tmpModelClass1._4.toArray)
+
+        hsmm.Utils.writeresult(applicationProps.getProperty("path_result_Class1_models"),
+          inter + ";" +
+            value_M + ";" +
+            value_k + ";" +
+            value_D + ";" +
+            modelClass1._1.mkString(",") + ";" +
+            modelClass1._2.mkString(",") + ";" +
+            modelClass1._3.mkString(",") + ";" +
+            modelClass1._4.mkString(",") + "\n")
+        log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+      }
+
+      if (scala.io.Source.fromFile(applicationProps.getProperty("path_result_Class0_models")).getLines.size == inter + 2) {
+        log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        log.info("Start Load Model Class 0")
+        val stringModel: List[String] = scala.io.Source.fromFile(applicationProps.getProperty("path_result_Class0_models")).getLines().toList
+        val arraymodel = stringModel.last.split(";")
+        modelClass0 = (arraymodel(3).split(",").map(_.toDouble),
+          arraymodel(4).split(",").map(_.toDouble),
+          arraymodel(5).split(",").map(_.toDouble),
+          arraymodel(6).split(",").map(_.toDouble))
+        log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+      } else {
+        log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        log.info("Start training Class 0")
+        val tmpModelClass0 = hsmm.BaumWelchAlgorithm.run1(trainClass0, value_M, value_k, value_D,
+          normalize(DenseVector.rand(value_M), 1.0),
+          hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_M)),
+          hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_k)),
+          hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_D)),
+          number_partitions, value_epsilon, max_num_iterations,
+          inter, applicationProps.getProperty("path_result_Class0_models_baumwelch"))
+
+        modelClass0 = (tmpModelClass0._1.toArray, tmpModelClass0._2.toArray, tmpModelClass0._3.toArray, tmpModelClass0._4.toArray)
+
+        hsmm.Utils.writeresult(applicationProps.getProperty("path_result_Class0_models"),
+          inter + ";" +
+            value_M + ";" +
+            value_k + ";" +
+            value_D + ";" +
+            modelClass0._1.mkString(",") + ";" +
+            modelClass0._2.mkString(",") + ";" +
+            modelClass0._3.mkString(",") + ";" +
+            modelClass0._4.mkString(",") + "\n")
+        log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+      }
 
       val resultClass1 =
-        hsmm.BaumWelchAlgorithm.validate(validClass1, value_M, value_k, value_D, modelClass1._1, modelClass1._2, modelClass1._3, modelClass1._4)
+        hsmm.BaumWelchAlgorithm.validate(validClass1, value_M, value_k, value_D,
+          new DenseVector(modelClass1._1), new DenseMatrix(value_M, value_M, modelClass1._2),
+          new DenseMatrix(value_M, value_k, modelClass1._3), new DenseMatrix(value_M, value_D, modelClass1._4))
           .withColumnRenamed("prob", "probMod1").as("valMod1")
           .join(
-            hsmm.BaumWelchAlgorithm.validate(validClass1, value_M, value_k, value_D, modelClass0._1, modelClass0._2, modelClass0._3, modelClass0._4)
+            hsmm.BaumWelchAlgorithm.validate(validClass1, value_M, value_k, value_D,
+              new DenseVector(modelClass0._1), new DenseMatrix(value_M, value_M, modelClass0._2),
+              new DenseMatrix(value_M, value_k, modelClass0._3), new DenseMatrix(value_M, value_D, modelClass0._4))
               .withColumnRenamed("prob", "probMod0").as("valMod0"),
             col("valMod1.workitem") === col("valMod0.workitem"), "inner")
+          .select(col("valMod1.workitem").as("workitem"), col("probMod1"), col("probMod0"))
       log.info("Saving result validation Class1")
-      resultClass1.write.format("com.databricks.spark.csv").save(applicationProps.getProperty("path_sample_Class1_kfold") + iter)
+      resultClass1.write.format("com.databricks.spark.csv").save(applicationProps.getProperty("path_sample_Class1_kfold") + inter)
 
       val resultClass0 =
-        hsmm.BaumWelchAlgorithm.validate(validClass0, value_M, value_k, value_D, modelClass1._1, modelClass1._2, modelClass1._3, modelClass1._4)
+        hsmm.BaumWelchAlgorithm.validate(validClass0, value_M, value_k, value_D,
+          new DenseVector(modelClass1._1), new DenseMatrix(value_M, value_M, modelClass1._2),
+          new DenseMatrix(value_M, value_k, modelClass1._3), new DenseMatrix(value_M, value_D, modelClass1._4))
           .withColumnRenamed("prob", "probMod1").as("valMod1")
           .join(
-            hsmm.BaumWelchAlgorithm.validate(validClass0, value_M, value_k, value_D, modelClass0._1, modelClass0._2, modelClass0._3, modelClass0._4)
+            hsmm.BaumWelchAlgorithm.validate(validClass0, value_M, value_k, value_D,
+              new DenseVector(modelClass0._1), new DenseMatrix(value_M, value_M, modelClass0._2),
+              new DenseMatrix(value_M, value_k, modelClass0._3), new DenseMatrix(value_M, value_D, modelClass0._4))
               .withColumnRenamed("prob", "probMod0").as("valMod0"),
             col("valMod1.workitem") === col("valMod0.workitem"), "inner")
+          .select(col("valMod1.workitem").as("workitem"), col("probMod1"), col("probMod0"))
       log.info("Saving result validation Class0")
-      resultClass0.write.format("com.databricks.spark.csv").save(applicationProps.getProperty("path_sample_Class0_kfold") + iter)
+      resultClass0.write.format("com.databricks.spark.csv").save(applicationProps.getProperty("path_sample_Class0_kfold") + inter)
 
       /** N value */
       log.info("Compute N")

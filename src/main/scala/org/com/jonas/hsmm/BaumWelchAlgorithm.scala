@@ -6,13 +6,15 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.expressions.UserDefinedFunction
+import org.com.jonas.hsmm
 
 object BaumWelchAlgorithm {
 
   /*** function with reduce function ****/
   def run1(observations: DataFrame, M: Int, k: Int, D: Int,
            initialPi: DenseVector[Double], initialA: DenseMatrix[Double], initialB: DenseMatrix[Double], initialP: DenseMatrix[Double],
-           numPartitions: Int = 1, epsilon: Double = 0.0001, maxIterations: Int = 10000):
+           numPartitions: Int = 1, epsilon: Double = 0.0001, maxIterations: Int = 10000,
+           kfold: Int, path_Class_baumwelch: String):
   (DenseVector[Double], DenseMatrix[Double], DenseMatrix[Double], DenseMatrix[Double]) = {
 
     var prior = initialPi
@@ -21,6 +23,24 @@ object BaumWelchAlgorithm {
     var durmat = initialP
     var antloglik: Double = Double.NegativeInfinity
     val log = org.apache.log4j.LogManager.getRootLogger
+
+    var inInter = 0
+    if (new java.io.File(path_Class_baumwelch + kfold).exists) {
+
+      inInter = scala.io.Source.fromFile(path_Class_baumwelch + kfold).getLines.size - 1
+      val stringModel: List[String] = scala.io.Source.fromFile(path_Class_baumwelch + kfold).getLines().toList
+      val arraymodel = stringModel.last.split(";")
+      prior = new DenseVector(arraymodel(4).split(",").map(_.toDouble))
+      transmat = new DenseMatrix(M, M, arraymodel(5).split(",").map(_.toDouble))
+      obsmat = new DenseMatrix(M, k, arraymodel(6).split(",").map(_.toDouble))
+      durmat = new DenseMatrix(M, D, arraymodel(7).split(",").map(_.toDouble))
+      antloglik = arraymodel(8).toDouble
+
+    } else {
+
+      hsmm.Utils.writeresult(path_Class_baumwelch + kfold, "kfold;iteration;M;k;Pi;A;B;P;loglik\n")
+
+    }
 
     observations.persist()
     var obstrained = observations
@@ -56,10 +76,23 @@ object BaumWelchAlgorithm {
 
         val loglik = newvalues.getAs[Double](0)
         log.info("LogLikehood Value: " + loglik)
+
         prior = normalize(new DenseVector(newvalues.getAs[Seq[Double]](1).toArray), 1.0)
         transmat = Utils.mkstochastic(new DenseMatrix(M, M, newvalues.getAs[Seq[Double]](2).toArray))
         obsmat = Utils.mkstochastic(new DenseMatrix(M, k, newvalues.getAs[Seq[Double]](3).toArray))
         durmat = Utils.mkstochastic(new DenseMatrix(M, D, newvalues.getAs[Seq[Double]](4).toArray))
+
+        hsmm.Utils.writeresult(path_Class_baumwelch + kfold,
+          kfold + ";" +
+            it + ";" +
+            M + ";" +
+            k + ";" +
+            D + ";" +
+            prior.toArray.mkString(",") + ";" +
+            transmat.toArray.mkString(",") + ";" +
+            obsmat.toArray.mkString(",") + ";" +
+            durmat.toArray.mkString(",") + ";" +
+            loglik + "\n")
 
         if (Utils.emconverged(loglik, antloglik, epsilon)){
           log.info("End Iteration: " + it)
