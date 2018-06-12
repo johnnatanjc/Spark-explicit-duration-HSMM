@@ -271,7 +271,7 @@ object BaumWelchAlgorithm {
     val matrixu: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
       DenseMatrix.zeros[Double](M, D)
     }
-    (0 until T).foreach(t =>
+    (0 until T).foreach(t => {
       (0 until M).foreach(j =>
         (0 until D).foreach(d =>
           if (t - d + 1 > -1)
@@ -279,7 +279,9 @@ object BaumWelchAlgorithm {
               if (matrixu(t)(j, d) == 0)
                 matrixu(t)(j, d) = funObslik(j, tau)
               else
-                matrixu(t)(j, d) = matrixu(t)(j, d) * funObslik(j, tau)))))
+                matrixu(t)(j, d) = matrixu(t)(j, d) * funObslik(j, tau))))
+      matrixu(t) = Utils.mkstochastic(matrixu(t))
+    })
     /*
     (0 until T).foreach(t =>
       (0 until M).foreach(j =>
@@ -505,7 +507,7 @@ object BaumWelchAlgorithm {
     val matrixu: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
       DenseMatrix.zeros[Double](M, D)
     }
-    (0 until T).foreach(t =>
+    (0 until T).foreach(t => {
       (0 until M).foreach(j =>
         (0 until D).foreach(d =>
           if (t - d + 1 > -1)
@@ -513,7 +515,9 @@ object BaumWelchAlgorithm {
               if (matrixu(t)(j, d) == 0)
                 matrixu(t)(j, d) = funObslik(j, tau)
               else
-                matrixu(t)(j, d) = matrixu(t)(j, d) * funObslik(j, tau)))))
+                matrixu(t)(j, d) = matrixu(t)(j, d) * funObslik(j, tau))))
+      matrixu(t) = Utils.mkstochastic(matrixu(t))
+    })
     /*
     (0 until T).foreach(t =>
       (0 until M).foreach(j =>
