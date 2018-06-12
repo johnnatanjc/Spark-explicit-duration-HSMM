@@ -1,7 +1,7 @@
 package org.com.jonas.hsmm
 
 import scala.util.control.Breaks._
-import breeze.linalg.{DenseMatrix, DenseVector, normalize, sum, tile}
+import breeze.linalg.{DenseMatrix, DenseVector, normalize, sum}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.DataFrame
