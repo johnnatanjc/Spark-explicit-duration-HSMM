@@ -280,7 +280,7 @@ object BaumWelchAlgorithm {
                 matrixu(t)(j, d) = funObslik(j, tau)
               else
                 matrixu(t)(j, d) = matrixu(t)(j, d) * funObslik(j, tau))))
-      matrixu(t) = Utils.mkstochastic(matrixu(t))
+      //matrixu(t) = Utils.mkstochastic(matrixu(t))
     })
     /*
     (0 until T).foreach(t =>
@@ -403,11 +403,23 @@ object BaumWelchAlgorithm {
       */
     val matrixg: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
 
+    (0 until M).foreach(i => matrixg(i, 0) = funPi(i) * betaprime(i, 0) )
+    matrixg(::, 0) := normalize(matrixg(::, 0), 1.0)
+
+    (1 until T - 1).foreach(t => {
+      (0 until M).foreach(i => matrixg(i, t) = matrixg(i, t - 1) + alphaprime(i, t) * betaprime(i, t) - alpha(i, t - 1) * beta(i, t - 1) )
+      matrixg(::, t) := normalize(matrixg(::, t), 1.0)
+    })
+
+    (0 until M).foreach(i => matrixg(i, T - 1) = alpha(i, T - 1) )
+    matrixg(::, T - 1) := normalize(matrixg(::, T - 1), 1.0)
+
+    /*
     matrixg(::, 0) := normalize(funPi :* betaprime(::, 0), 1.0)
     matrixg(::, T - 1) := normalize(alpha(::, T - 1), 1.0)
     (1 until T - 1).foreach(t =>
       matrixg(::, t) := normalize(matrixg(::, t - 1) + alphaprime(::, t) :* betaprime(::, t) + alpha(::, t - 1) :* beta(::, t - 1), 1.0))
-
+*/
     /**
       * Matriz newA, estimation of a(i,j)
       */
