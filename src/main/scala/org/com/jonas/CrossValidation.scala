@@ -264,7 +264,7 @@ object CrossValidation {
       val speci: Double = TN / (TN + FP)
       log.info("Value of speci: " + speci)
 
-      /** efficiency */
+      /** Accuracy */
       log.info("Compute Efficiency")
       val effic: Double = (TP + TN) / N
       log.info("Value of effic: " + effic)
