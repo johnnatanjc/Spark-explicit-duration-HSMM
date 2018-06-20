@@ -574,6 +574,8 @@ object BaumWelchAlgorithm {
       alphaprime(::, t + 1) := normalize(alphaprime(::, t + 1), 1.0)
     })
 
+    sum(alpha(::, T - 1))
+
     /*
     (0 until T).foreach(t => {
       (0 until M).foreach(j =>
@@ -583,35 +585,35 @@ object BaumWelchAlgorithm {
       alphaprime(::, t + 1) := normalize((alpha(::, t).t * funA).t, 1.0)
     })
     */
-    val loglik: Double = sum(scale.map(Math.log))
+//    val loglik: Double = sum(scale.map(Math.log))
 
     /**
       * Backwards variables
       * el beta en la posición cero es cero, why?
       */
-    val beta: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
-    val betaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T + 1)
+//    val beta: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
+//    val betaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T + 1)
 
-    beta(::, T - 1) := 1.0
+//    beta(::, T - 1) := 1.0
 
-    val t = T - 1
-    (0 until M).foreach(j =>
-      (0 until D).foreach(d =>
-        if (t + d < T)
-          betaprime(j, t + 1) = betaprime(j, t + 1) + funP(j, d) * matrixu(t + d)(j, d) * beta(j, t + d)))
-    betaprime(::, t + 1) := normalize(betaprime(::, t + 1), 1.0)
+//    val t = T - 1
+//    (0 until M).foreach(j =>
+//      (0 until D).foreach(d =>
+//        if (t + d < T)
+//          betaprime(j, t + 1) = betaprime(j, t + 1) + funP(j, d) * matrixu(t + d)(j, d) * beta(j, t + d)))
+//    betaprime(::, t + 1) := normalize(betaprime(::, t + 1), 1.0)
 
-    for (t <- T - 2 to -1 by -1) {
-      (0 until M).foreach(j =>
-        (0 until D).foreach(d =>
-          if (t + d < T)
-            betaprime(j, t + 1) = betaprime(j, t + 1) + funP(j, d) * matrixu(t + d)(j, d) * beta(j, t + d)))
-      betaprime(::, t + 1) := normalize(betaprime(::, t + 1), 1.0)
+//    for (t <- T - 2 to -1 by -1) {
+//      (0 until M).foreach(j =>
+//        (0 until D).foreach(d =>
+//          if (t + d < T)
+//            betaprime(j, t + 1) = betaprime(j, t + 1) + funP(j, d) * matrixu(t + d)(j, d) * beta(j, t + d)))
+//      betaprime(::, t + 1) := normalize(betaprime(::, t + 1), 1.0)
 
-      (0 until M).foreach(j =>
-        (0 until M).foreach(i => beta(j, t) = beta(j, t) + funA(j, i) * betaprime(i, t + 1)))
-      beta(::, t) := normalize(betaprime(::, t + 1), 1.0)
-    }
+//      (0 until M).foreach(j =>
+//        (0 until M).foreach(i => beta(j, t) = beta(j, t) + funA(j, i) * betaprime(i, t + 1)))
+//      beta(::, t) := normalize(betaprime(::, t + 1), 1.0)
+//    }
 
     /*
         for (t <- T - 1 to 0 by -1) {
@@ -625,16 +627,16 @@ object BaumWelchAlgorithm {
     /**
       * Matriz n(t,i,d)
       */
-    val matrixn: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
-      DenseMatrix.ones[Double](M, D)
-    }
-    (0 until T).foreach(t =>
-      (0 until M).foreach(i => {
-        (0 until D).foreach(d =>
-          if (t - d + 1 > -1 && t - d + 1 < T + 1)
-            matrixn(t)(i, d) = alphaprime(i, t - d + 1) * funP(i, d) * matrixu(t)(i, d) * beta(i, t))
-        matrixn(t)(i, ::) := normalize(matrixn(t)(i, ::).t, 1.0).t
-      }))
+//    val matrixn: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
+//      DenseMatrix.ones[Double](M, D)
+//    }
+//    (0 until T).foreach(t =>
+//      (0 until M).foreach(i => {
+//        (0 until D).foreach(d =>
+//          if (t - d + 1 > -1 && t - d + 1 < T + 1)
+//            matrixn(t)(i, d) = alphaprime(i, t - d + 1) * funP(i, d) * matrixu(t)(i, d) * beta(i, t))
+//        matrixn(t)(i, ::) := normalize(matrixn(t)(i, ::).t, 1.0).t
+//      }))
     /*
     (0 until T).foreach(t =>
       (0 until M).foreach(i => {
@@ -646,14 +648,14 @@ object BaumWelchAlgorithm {
     /**
       * Matriz xi(t,i,j)
       */
-    val matrixi: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
-      DenseMatrix.ones[Double](M, M)
-    }
-    (0 until T).foreach(t => {
-      (0 until M).foreach(i =>
-        (0 until M).foreach(j => matrixi(t)(i, j) = alpha(i, t) * funA(i, j) * betaprime(j, t + 1)))
-      matrixi(t) = Utils.mkstochastic(matrixi(t))
-    })
+//    val matrixi: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
+//      DenseMatrix.ones[Double](M, M)
+//    }
+//    (0 until T).foreach(t => {
+//      (0 until M).foreach(i =>
+//        (0 until M).foreach(j => matrixi(t)(i, j) = alpha(i, t) * funA(i, j) * betaprime(j, t + 1)))
+//      matrixi(t) = Utils.mkstochastic(matrixi(t))
+//    })
     /*
     (0 until T).foreach(t =>
       matrixi(t) = Utils.mkstochastic(tile(alpha(::, t), 1, M) :* funA :* tile(betaprime(::, t + 1).t, 1, M)))
@@ -662,18 +664,18 @@ object BaumWelchAlgorithm {
     /**
       * Matriz gamma(t, i)
       */
-    val matrixg: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
-
-    (0 until M).foreach(i => matrixg(i, 0) = funPi(i) * betaprime(i, 0))
-    matrixg(::, 0) := normalize(matrixg(::, 0), 1.0)
-
-    (1 until T - 1).foreach(t => {
-      (0 until M).foreach(i => matrixg(i, t) = matrixg(i, t - 1) + alphaprime(i, t) * betaprime(i, t) - alpha(i, t - 1) * beta(i, t - 1))
-      matrixg(::, t) := normalize(matrixg(::, t), 1.0)
-    })
-
-    (0 until M).foreach(i => matrixg(i, T - 1) = alpha(i, T - 1))
-    matrixg(::, T - 1) := normalize(matrixg(::, T - 1), 1.0)
+//    val matrixg: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
+//
+//    (0 until M).foreach(i => matrixg(i, 0) = funPi(i) * betaprime(i, 0))
+//    matrixg(::, 0) := normalize(matrixg(::, 0), 1.0)
+//
+//    (1 until T - 1).foreach(t => {
+//      (0 until M).foreach(i => matrixg(i, t) = matrixg(i, t - 1) + alphaprime(i, t) * betaprime(i, t) - alpha(i, t - 1) * beta(i, t - 1))
+//      matrixg(::, t) := normalize(matrixg(::, t), 1.0)
+//    })
+//
+//    (0 until M).foreach(i => matrixg(i, T - 1) = alpha(i, T - 1))
+//    matrixg(::, T - 1) := normalize(matrixg(::, T - 1), 1.0)
 
     /*
     matrixg(::, 0) := normalize(funPi :* betaprime(::, 0), 1.0)
@@ -681,7 +683,7 @@ object BaumWelchAlgorithm {
     (1 until T - 1).foreach(t =>
       matrixg(::, t) := normalize(matrixg(::, t - 1) + alphaprime(::, t) :* betaprime(::, t) + alpha(::, t - 1) :* beta(::, t - 1), 1.0))
 */
-    sum(matrixg(::, T - 1))
+//    sum(matrixg(::, T - 1))
 
   })
 
