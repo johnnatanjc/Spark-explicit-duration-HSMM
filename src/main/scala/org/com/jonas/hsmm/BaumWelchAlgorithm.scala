@@ -26,7 +26,6 @@ object BaumWelchAlgorithm {
 
     var inInter = 0
     if (new java.io.File(path_Class_baumwelch + kfold).exists) {
-
       inInter = scala.io.Source.fromFile(path_Class_baumwelch + kfold).getLines.size - 1
       val stringModel: List[String] = scala.io.Source.fromFile(path_Class_baumwelch + kfold).getLines().toList
       val arraymodel = stringModel.last.split(";")
@@ -35,12 +34,7 @@ object BaumWelchAlgorithm {
       obsmat = new DenseMatrix(M, k, arraymodel(6).split(",").map(_.toDouble))
       durmat = new DenseMatrix(M, D, arraymodel(7).split(",").map(_.toDouble))
       antloglik = arraymodel(8).toDouble
-
-    } else {
-
-      hsmm.Utils.writeresult(path_Class_baumwelch + kfold, "kfold;iteration;M;k;Pi;A;B;P;loglik\n")
-
-    }
+    } else hsmm.Utils.writeresult(path_Class_baumwelch + kfold, "kfold;iteration;M;k;Pi;A;B;P;loglik\n")
 
     observations.persist()
     var obstrained = observations
@@ -76,12 +70,10 @@ object BaumWelchAlgorithm {
 
         val loglik = newvalues.getAs[Double](0)
         log.info("LogLikehood Value: " + loglik)
-
         prior = normalize(new DenseVector(newvalues.getAs[Seq[Double]](1).toArray), 1.0)
         transmat = Utils.mkstochastic(new DenseMatrix(M, M, newvalues.getAs[Seq[Double]](2).toArray))
         obsmat = Utils.mkstochastic(new DenseMatrix(M, k, newvalues.getAs[Seq[Double]](3).toArray))
         durmat = Utils.mkstochastic(new DenseMatrix(M, D, newvalues.getAs[Seq[Double]](4).toArray))
-
         hsmm.Utils.writeresult(path_Class_baumwelch + kfold,
           kfold + ";" +
             it + ";" +
@@ -112,7 +104,6 @@ object BaumWelchAlgorithm {
           .withColumn("P", lit(initialP.toArray))
           .withColumn("obs", udf_toarray(col("str_obs")))
           .withColumn("T", udf_obssize(col("obs")))
-
         log.info("End Iteration: " + it)
         log.info("-----------------------------------------------------------------------------------------")
       })
@@ -330,6 +321,10 @@ object BaumWelchAlgorithm {
       alphaprime(::, t + 1) := normalize((alpha(::, t).t * funA).t, 1.0)
     })
     */
+    //var loglik: Double = 0.0
+    //if (scale.toArray.filter(i => i == 0).isEmpty) loglik = sum(scale.map(Math.log)) else loglik = Double.NegativeInfinity
+    //if (scale.findAll(i => i == 0).isEmpty) loglik = sum(scale.map(Math.log)) else loglik = Double.NegativeInfinity
+    //Modificación validar si funciona
     val loglik: Double = sum(scale.map(Math.log))
 
     /**
@@ -574,8 +569,6 @@ object BaumWelchAlgorithm {
       alphaprime(::, t + 1) := normalize(alphaprime(::, t + 1), 1.0)
     })
 
-    sum(alpha(::, T - 1))
-
     /*
     (0 until T).foreach(t => {
       (0 until M).foreach(j =>
@@ -585,105 +578,13 @@ object BaumWelchAlgorithm {
       alphaprime(::, t + 1) := normalize((alpha(::, t).t * funA).t, 1.0)
     })
     */
-//    val loglik: Double = sum(scale.map(Math.log))
+    //var loglik: Double = 0.0
+    //if (scale.toArray.filter(i => i == 0).isEmpty) loglik = sum(scale.map(Math.log)) else loglik = Double.NegativeInfinity
+    //if (scale.findAll(i => i == 0).isEmpty) loglik = sum(scale.map(Math.log)) else loglik = Double.NegativeInfinity
+    //Modificación validar si funciona
+    val loglik: Double = sum(scale.map(Math.log))
 
-    /**
-      * Backwards variables
-      * el beta en la posición cero es cero, why?
-      */
-//    val beta: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
-//    val betaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T + 1)
-
-//    beta(::, T - 1) := 1.0
-
-//    val t = T - 1
-//    (0 until M).foreach(j =>
-//      (0 until D).foreach(d =>
-//        if (t + d < T)
-//          betaprime(j, t + 1) = betaprime(j, t + 1) + funP(j, d) * matrixu(t + d)(j, d) * beta(j, t + d)))
-//    betaprime(::, t + 1) := normalize(betaprime(::, t + 1), 1.0)
-
-//    for (t <- T - 2 to -1 by -1) {
-//      (0 until M).foreach(j =>
-//        (0 until D).foreach(d =>
-//          if (t + d < T)
-//            betaprime(j, t + 1) = betaprime(j, t + 1) + funP(j, d) * matrixu(t + d)(j, d) * beta(j, t + d)))
-//      betaprime(::, t + 1) := normalize(betaprime(::, t + 1), 1.0)
-
-//      (0 until M).foreach(j =>
-//        (0 until M).foreach(i => beta(j, t) = beta(j, t) + funA(j, i) * betaprime(i, t + 1)))
-//      beta(::, t) := normalize(betaprime(::, t + 1), 1.0)
-//    }
-
-    /*
-        for (t <- T - 1 to 0 by -1) {
-          (0 until M).foreach(j =>
-            (0 until Math.min(T - t, D)).foreach(d =>
-              betaprime(j, t + 1) = betaprime(j, t + 1) + funP(j, d) * matrixu(t + d)(j, d) * beta(j, t + d)))
-          betaprime(::, t + 1) := normalize(betaprime(::, t + 1), 1.0)
-          beta(::, t) := normalize(funA * betaprime(::, t + 1), 1.0)
-        }*/
-
-    /**
-      * Matriz n(t,i,d)
-      */
-//    val matrixn: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
-//      DenseMatrix.ones[Double](M, D)
-//    }
-//    (0 until T).foreach(t =>
-//      (0 until M).foreach(i => {
-//        (0 until D).foreach(d =>
-//          if (t - d + 1 > -1 && t - d + 1 < T + 1)
-//            matrixn(t)(i, d) = alphaprime(i, t - d + 1) * funP(i, d) * matrixu(t)(i, d) * beta(i, t))
-//        matrixn(t)(i, ::) := normalize(matrixn(t)(i, ::).t, 1.0).t
-//      }))
-    /*
-    (0 until T).foreach(t =>
-      (0 until M).foreach(i => {
-        (0 until Math.min(T, D)).foreach(d =>
-          matrixn(t)(i, d) = alphaprime(i, t - d) * funP(i, d) * matrixu(t)(i, d) * beta(i, t))
-        matrixn(t)(i, ::) := normalize(matrixn(t)(i, ::).t, 1.0).t
-      }))*/
-
-    /**
-      * Matriz xi(t,i,j)
-      */
-//    val matrixi: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
-//      DenseMatrix.ones[Double](M, M)
-//    }
-//    (0 until T).foreach(t => {
-//      (0 until M).foreach(i =>
-//        (0 until M).foreach(j => matrixi(t)(i, j) = alpha(i, t) * funA(i, j) * betaprime(j, t + 1)))
-//      matrixi(t) = Utils.mkstochastic(matrixi(t))
-//    })
-    /*
-    (0 until T).foreach(t =>
-      matrixi(t) = Utils.mkstochastic(tile(alpha(::, t), 1, M) :* funA :* tile(betaprime(::, t + 1).t, 1, M)))
-      */
-
-    /**
-      * Matriz gamma(t, i)
-      */
-//    val matrixg: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
-//
-//    (0 until M).foreach(i => matrixg(i, 0) = funPi(i) * betaprime(i, 0))
-//    matrixg(::, 0) := normalize(matrixg(::, 0), 1.0)
-//
-//    (1 until T - 1).foreach(t => {
-//      (0 until M).foreach(i => matrixg(i, t) = matrixg(i, t - 1) + alphaprime(i, t) * betaprime(i, t) - alpha(i, t - 1) * beta(i, t - 1))
-//      matrixg(::, t) := normalize(matrixg(::, t), 1.0)
-//    })
-//
-//    (0 until M).foreach(i => matrixg(i, T - 1) = alpha(i, T - 1))
-//    matrixg(::, T - 1) := normalize(matrixg(::, T - 1), 1.0)
-
-    /*
-    matrixg(::, 0) := normalize(funPi :* betaprime(::, 0), 1.0)
-    matrixg(::, T - 1) := normalize(alpha(::, T - 1), 1.0)
-    (1 until T - 1).foreach(t =>
-      matrixg(::, t) := normalize(matrixg(::, t - 1) + alphaprime(::, t) :* betaprime(::, t) + alpha(::, t - 1) :* beta(::, t - 1), 1.0))
-*/
-//    sum(matrixg(::, T - 1))
+    sum(alpha(::, T - 1))
 
   })
 
