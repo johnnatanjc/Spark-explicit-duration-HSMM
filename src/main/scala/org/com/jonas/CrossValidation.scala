@@ -235,12 +235,12 @@ object CrossValidation {
 
       /** False Negatives */
       log.info("Compute False Negatives")
-      val FN: Double = resultClass1.where("probMod1 < probMod0").count
+      val FN: Double = resultClass1.where("probMod1 <= probMod0").count
       log.info("Value of FN: " + FN)
 
       /** True Negatives */
       log.info("Compute True Negatives")
-      val TN: Double = resultClass0.where("probMod1 < probMod0").count
+      val TN: Double = resultClass0.where("probMod1 <= probMod0").count
       log.info("Value of TN: " + TN)
 
       /** sensitivity */

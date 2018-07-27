@@ -583,9 +583,7 @@ object BaumWelchAlgorithm {
     //if (scale.findAll(i => i == 0).isEmpty) loglik = sum(scale.map(Math.log)) else loglik = Double.NegativeInfinity
     //Modificación validar si funciona
     val loglik: Double = sum(scale.map(Math.log))
-
-    sum(alpha(::, T - 1))
-
+    loglik
   })
 
 
