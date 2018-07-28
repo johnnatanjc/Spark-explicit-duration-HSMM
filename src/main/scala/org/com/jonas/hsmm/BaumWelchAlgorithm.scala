@@ -273,26 +273,6 @@ object BaumWelchAlgorithm {
           if (d - 1 > -1 && t - d + 1 > -1)
             matrixu(t)(j, d) = matrixu(t)(j, d - 1) * funObslik(j, t - d + 1))))
 
-    /*
-    (0 until T).foreach(t => {
-      (0 until M).foreach(j =>
-        (0 until D).foreach(d =>
-          if (t - d + 1 > -1)
-            (t - d + 1 to t).foreach(tau =>
-              if (matrixu(t)(j, d) == 0)
-                matrixu(t)(j, d) = funObslik(j, tau)
-              else
-                matrixu(t)(j, d) = matrixu(t)(j, d) * funObslik(j, tau))))
-      //matrixu(t) = Utils.mkstochastic(matrixu(t))
-    })
-    */
-    /*
-    (0 until T).foreach(t =>
-      (0 until M).foreach(j =>
-        (0 until Math.min(T, D)).foreach(d =>
-          (t - d + 1 to t).foreach(tau => matrixu(t)(j, d) = matrixu(t)(j, d) * funObslik(j, tau)))))
-    */
-
     /**
       * Forwards variables
       */
@@ -312,15 +292,6 @@ object BaumWelchAlgorithm {
       alphaprime(::, t + 1) := normalize(alphaprime(::, t + 1), 1.0)
     })
 
-    /*
-    (0 until T).foreach(t => {
-      (0 until M).foreach(j =>
-        (0 until Math.min(T, D)).foreach(d =>
-          alpha(j, t) = alpha(j, t) + (alphaprime(j, t - d) * funP(j, d) * matrixu(t)(j, d))))
-      alpha(::, t) := Utils.normalise(alpha(::, t), scale, t)
-      alphaprime(::, t + 1) := normalize((alpha(::, t).t * funA).t, 1.0)
-    })
-    */
     //var loglik: Double = 0.0
     //if (scale.toArray.filter(i => i == 0).isEmpty) loglik = sum(scale.map(Math.log)) else loglik = Double.NegativeInfinity
     //if (scale.findAll(i => i == 0).isEmpty) loglik = sum(scale.map(Math.log)) else loglik = Double.NegativeInfinity
@@ -355,15 +326,6 @@ object BaumWelchAlgorithm {
       beta(::, t) := normalize(betaprime(::, t + 1), 1.0)
     }
 
-    /*
-        for (t <- T - 1 to 0 by -1) {
-          (0 until M).foreach(j =>
-            (0 until Math.min(T - t, D)).foreach(d =>
-              betaprime(j, t + 1) = betaprime(j, t + 1) + funP(j, d) * matrixu(t + d)(j, d) * beta(j, t + d)))
-          betaprime(::, t + 1) := normalize(betaprime(::, t + 1), 1.0)
-          beta(::, t) := normalize(funA * betaprime(::, t + 1), 1.0)
-        }*/
-
     /**
       * Matriz n(t,i,d)
       */
@@ -377,13 +339,6 @@ object BaumWelchAlgorithm {
             matrixn(t)(i, d) = alphaprime(i, t - d + 1) * funP(i, d) * matrixu(t)(i, d) * beta(i, t))
         matrixn(t)(i, ::) := normalize(matrixn(t)(i, ::).t, 1.0).t
       }))
-    /*
-    (0 until T).foreach(t =>
-      (0 until M).foreach(i => {
-        (0 until Math.min(T, D)).foreach(d =>
-          matrixn(t)(i, d) = alphaprime(i, t - d) * funP(i, d) * matrixu(t)(i, d) * beta(i, t))
-        matrixn(t)(i, ::) := normalize(matrixn(t)(i, ::).t, 1.0).t
-      }))*/
 
     /**
       * Matriz xi(t,i,j)
@@ -396,10 +351,6 @@ object BaumWelchAlgorithm {
         (0 until M).foreach(j => matrixi(t)(i, j) = alpha(i, t) * funA(i, j) * betaprime(j, t + 1)))
       matrixi(t) = Utils.mkstochastic(matrixi(t))
     })
-    /*
-    (0 until T).foreach(t =>
-      matrixi(t) = Utils.mkstochastic(tile(alpha(::, t), 1, M) :* funA :* tile(betaprime(::, t + 1).t, 1, M)))
-      */
 
     /**
       * Matriz gamma(t, i)
@@ -417,12 +368,6 @@ object BaumWelchAlgorithm {
     (0 until M).foreach(i => matrixg(i, T - 1) = alpha(i, T - 1))
     matrixg(::, T - 1) := normalize(matrixg(::, T - 1), 1.0)
 
-    /*
-    matrixg(::, 0) := normalize(funPi :* betaprime(::, 0), 1.0)
-    matrixg(::, T - 1) := normalize(alpha(::, T - 1), 1.0)
-    (1 until T - 1).foreach(t =>
-      matrixg(::, t) := normalize(matrixg(::, t - 1) + alphaprime(::, t) :* betaprime(::, t) + alpha(::, t - 1) :* beta(::, t - 1), 1.0))
-*/
     /**
       * Matriz newA, estimation of a(i,j)
       */
@@ -455,20 +400,6 @@ object BaumWelchAlgorithm {
       })
       newB(i, ::) := normalize(newB(i, ::).t, 1.0).t
     })
-
-    /*
-    val newB = DenseMatrix.zeros[Double](M, k)
-    (0 until M).foreach(i => {
-      (0 until k).foreach(v => {
-        var num = 0.0
-        obs.zipWithIndex.filter(_._1 == v).map(_._2).foreach(t => num = num + matrixg(i, t))
-        var den = 0.0
-        (0 until T).foreach(t => den = den + matrixg(i, t))
-        newB(i, v) = num / den
-      })
-      newB(i, ::) := normalize(newB(i, ::).t, 1.0).t
-    })
-    */
 
     /**
       * Matriz newP, estimation of p(i,d)
@@ -530,26 +461,6 @@ object BaumWelchAlgorithm {
           if (d - 1 > -1 && t - d + 1 > -1)
             matrixu(t)(j, d) = matrixu(t)(j, d - 1) * funObslik(j, t - d + 1))))
 
-    /*
-    (0 until T).foreach(t => {
-      (0 until M).foreach(j =>
-        (0 until D).foreach(d =>
-          if (t - d + 1 > -1)
-            (t - d + 1 to t).foreach(tau =>
-              if (matrixu(t)(j, d) == 0)
-                matrixu(t)(j, d) = funObslik(j, tau)
-              else
-                matrixu(t)(j, d) = matrixu(t)(j, d) * funObslik(j, tau))))
-      //matrixu(t) = Utils.mkstochastic(matrixu(t))
-    })
-    */
-    /*
-    (0 until T).foreach(t =>
-      (0 until M).foreach(j =>
-        (0 until Math.min(T, D)).foreach(d =>
-          (t - d + 1 to t).foreach(tau => matrixu(t)(j, d) = matrixu(t)(j, d) * funObslik(j, tau)))))
-    */
-
     /**
       * Forwards variables
       */
@@ -569,15 +480,6 @@ object BaumWelchAlgorithm {
       alphaprime(::, t + 1) := normalize(alphaprime(::, t + 1), 1.0)
     })
 
-    /*
-    (0 until T).foreach(t => {
-      (0 until M).foreach(j =>
-        (0 until Math.min(T, D)).foreach(d =>
-          alpha(j, t) = alpha(j, t) + (alphaprime(j, t - d) * funP(j, d) * matrixu(t)(j, d))))
-      alpha(::, t) := Utils.normalise(alpha(::, t), scale, t)
-      alphaprime(::, t + 1) := normalize((alpha(::, t).t * funA).t, 1.0)
-    })
-    */
     //var loglik: Double = 0.0
     //if (scale.toArray.filter(i => i == 0).isEmpty) loglik = sum(scale.map(Math.log)) else loglik = Double.NegativeInfinity
     //if (scale.findAll(i => i == 0).isEmpty) loglik = sum(scale.map(Math.log)) else loglik = Double.NegativeInfinity
