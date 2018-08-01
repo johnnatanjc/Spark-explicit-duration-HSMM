@@ -1,4 +1,4 @@
-package org.com.jonas.hsmm
+package org.com.jonas.nhsmm
 
 import scala.util.control.Breaks._
 import breeze.linalg.{DenseMatrix, DenseVector, normalize, sum}
@@ -6,7 +6,7 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.expressions.UserDefinedFunction
-import org.com.jonas.hsmm
+import org.com.jonas.nhsmm
 
 object BaumWelchAlgorithm {
 
@@ -34,7 +34,7 @@ object BaumWelchAlgorithm {
       obsmat = new DenseMatrix(M, k, arraymodel(6).split(",").map(_.toDouble))
       durmat = new DenseMatrix(M, D, arraymodel(7).split(",").map(_.toDouble))
       antloglik = arraymodel(8).toDouble
-    } else hsmm.Utils.writeresult(path_Class_baumwelch + kfold, "kfold;iteration;M;k;Pi;A;B;P;loglik\n")
+    } else nhsmm.Utils.writeresult(path_Class_baumwelch + kfold, "kfold;iteration;M;k;Pi;A;B;P;loglik\n")
 
     observations.persist()
     var obstrained = observations
@@ -74,7 +74,7 @@ object BaumWelchAlgorithm {
         transmat = Utils.mkstochastic(new DenseMatrix(M, M, newvalues.getAs[Seq[Double]](2).toArray))
         obsmat = Utils.mkstochastic(new DenseMatrix(M, k, newvalues.getAs[Seq[Double]](3).toArray))
         durmat = Utils.mkstochastic(new DenseMatrix(M, D, newvalues.getAs[Seq[Double]](4).toArray))
-        hsmm.Utils.writeresult(path_Class_baumwelch + kfold,
+        nhsmm.Utils.writeresult(path_Class_baumwelch + kfold,
           kfold + ";" +
             it + ";" +
             M + ";" +
@@ -171,7 +171,7 @@ object BaumWelchAlgorithm {
         obsmat = Utils.mkstochastic(new DenseMatrix(M, k, newvalues.getAs[Seq[Double]](3).toArray))
         durmat = Utils.mkstochastic(new DenseMatrix(M, D, newvalues.getAs[Seq[Double]](4).toArray))
 
-        hsmm.Utils.writeresult(path_Class_baumwelch + kfold,
+        nhsmm.Utils.writeresult(path_Class_baumwelch + kfold,
           kfold + ";" +
             it + ";" +
             M + ";" +
@@ -256,6 +256,20 @@ object BaumWelchAlgorithm {
     val funP: DenseMatrix[Double] = new DenseMatrix(M, D, P.toArray)
     val funObslik: DenseMatrix[Double] = new DenseMatrix(M, T, obslik.toArray)
 
+
+    val alpha: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
+      DenseMatrix.zeros[Double](M, D)
+    }
+
+    (0 until M).foreach(j => alpha(0)(j, 0) = funPi(j) * funObslik(j, 0))
+
+    (1 until T).foreach(t =>
+      (0 until M).foreach(j => {
+        val temp = 0.0
+        (0 until M).foreach(i => temp = temp + alpha(t - 1)(i, 0) * funA() )
+
+      }))
+
     /**
       * Matriz u(t,j,d)
       */
@@ -270,7 +284,7 @@ object BaumWelchAlgorithm {
     (0 until T).foreach(t =>
       (0 until M).foreach(j =>
         (1 until D).foreach(d =>
-        //(1 to t + 1).foreach(d =>
+          //(1 to t + 1).foreach(d =>
           if (d - 1 > -1 && t - d + 1 > -1)
             matrixu(t)(j, d) = matrixu(t)(j, d - 1) * funObslik(j, t - d + 1))))
 
