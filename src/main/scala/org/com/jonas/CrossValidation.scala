@@ -127,10 +127,10 @@ object CrossValidation {
         log.info("Start Load Model Class 1")
         val stringModel: List[String] = scala.io.Source.fromFile(applicationProps.getProperty("path_result_Class1_models")).getLines().toList
         val arraymodel = stringModel.last.split(";")
-        modelClass1 = (arraymodel(3).split(",").map(_.toDouble),
-          arraymodel(4).split(",").map(_.toDouble),
+        modelClass1 = (arraymodel(4).split(",").map(_.toDouble),
           arraymodel(5).split(",").map(_.toDouble),
-          arraymodel(6).split(",").map(_.toDouble))
+          arraymodel(6).split(",").map(_.toDouble),
+          arraymodel(7).split(",").map(_.toDouble))
         log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
       }else{
         log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
@@ -160,10 +160,10 @@ object CrossValidation {
         log.info("Start Load Model Class 0")
         val stringModel: List[String] = scala.io.Source.fromFile(applicationProps.getProperty("path_result_Class0_models")).getLines().toList
         val arraymodel = stringModel.last.split(";")
-        modelClass0 = (arraymodel(3).split(",").map(_.toDouble),
-          arraymodel(4).split(",").map(_.toDouble),
+        modelClass0 = (arraymodel(4).split(",").map(_.toDouble),
           arraymodel(5).split(",").map(_.toDouble),
-          arraymodel(6).split(",").map(_.toDouble))
+          arraymodel(6).split(",").map(_.toDouble),
+          arraymodel(7).split(",").map(_.toDouble))
         log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
       } else {
         log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
