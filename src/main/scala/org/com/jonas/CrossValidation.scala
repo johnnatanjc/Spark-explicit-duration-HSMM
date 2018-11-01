@@ -73,7 +73,7 @@ object CrossValidation {
 
       inInter = scala.io.Source.fromFile(applicationProps.getProperty("path_result")).getLines.size - 1
 
-    }else{
+    } else {
       /**
         * Make info Class 1
         */
@@ -132,7 +132,7 @@ object CrossValidation {
           arraymodel(6).split(",").map(_.toDouble),
           arraymodel(7).split(",").map(_.toDouble))
         log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-      }else{
+      } else {
         log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         log.info("Start training Class 1")
         val tmpModelClass1 = hsmm.BaumWelchAlgorithm.run1(trainClass1, value_M, value_k, value_D,

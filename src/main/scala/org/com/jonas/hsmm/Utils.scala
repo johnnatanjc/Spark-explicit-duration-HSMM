@@ -1,6 +1,6 @@
 package org.com.jonas.hsmm
 
-import breeze.linalg.{DenseMatrix, DenseVector, Transpose, normalize, sum}
+import breeze.linalg.{DenseMatrix, DenseVector, normalize, sum}
 
 object Utils {
 
@@ -10,8 +10,6 @@ object Utils {
     val avg_loglik = (Math.abs(loglik) + Math.abs(previous_loglik) + eps) / 2
     if ((delta_loglik / avg_loglik) < threshold) true else false
   }
-
-  //def normalise(input: DenseVector[Double]): DenseVector[Double] = input :*= 1 / sum(input)
 
   def normalise(input: DenseMatrix[Double]): DenseMatrix[Double] = input :*= 1 / sum(input)
 
@@ -32,5 +30,4 @@ object Utils {
     fw.write(result)
     fw.close()
   }
-
 }

@@ -165,12 +165,10 @@ object BaumWelchAlgorithm {
         /*
         val loglik = newvalues.getAs[Double](0)
         log.info("LogLikehood Value: " + loglik)
-
         prior = normalize(new DenseVector(newvalues.getAs[Seq[Double]](1).toArray), 1.0)
         transmat = Utils.mkstochastic(new DenseMatrix(M, M, newvalues.getAs[Seq[Double]](2).toArray))
         obsmat = Utils.mkstochastic(new DenseMatrix(M, k, newvalues.getAs[Seq[Double]](3).toArray))
         durmat = Utils.mkstochastic(new DenseMatrix(M, D, newvalues.getAs[Seq[Double]](4).toArray))
-
         hsmm.Utils.writeresult(path_Class_baumwelch + kfold,
           kfold + ";" +
             it + ";" +
@@ -182,14 +180,12 @@ object BaumWelchAlgorithm {
             obsmat.toArray.mkString(",") + ";" +
             durmat.toArray.mkString(",") + ";" +
             loglik + "\n")
-
         if (Utils.emconverged(loglik, antloglik, epsilon)) {
           log.info("End Iteration: " + it)
           log.info("-----------------------------------------------------------------------------------------")
           break
         }
         antloglik = loglik
-
         obstrained.unpersist()
         obstrained = observations
           .withColumn("M", lit(M))
@@ -201,7 +197,6 @@ object BaumWelchAlgorithm {
           .withColumn("P", lit(initialP.toArray))
           .withColumn("obs", udf_toarray(col("str_obs")))
           .withColumn("T", udf_obssize(col("obs")))
-
         log.info("End Iteration: " + it)
         log.info("-----------------------------------------------------------------------------------------")
         */
@@ -270,7 +265,7 @@ object BaumWelchAlgorithm {
     (0 until T).foreach(t =>
       (0 until M).foreach(j =>
         (1 until D).foreach(d =>
-        //(1 to t + 1).foreach(d =>
+          //(1 to t + 1).foreach(d =>
           if (d - 1 > -1 && t - d + 1 > -1)
             matrixu(t)(j, d) = matrixu(t)(j, d - 1) * funObslik(j, t - d + 1))))
 
@@ -289,7 +284,7 @@ object BaumWelchAlgorithm {
             alpha(j, t) = alpha(j, t) + (alphaprime(j, t - d + 1) * funP(j, d) * matrixu(t)(j, d))))
       alpha(::, t) := Utils.normalise(alpha(::, t), scale, t)
       (0 until M).foreach(j =>
-        (0 until M).foreach(i => alphaprime(j, t + 1) = alphaprime(j, t + 1) + alpha(i, t) * funA(i, j)))
+        (0 until M).foreach(i => if (i != j) alphaprime(j, t + 1) = alphaprime(j, t + 1) + alpha(i, t) * funA(i, j)))
       alphaprime(::, t + 1) := normalize(alphaprime(::, t + 1), 1.0)
     })
 
@@ -323,8 +318,8 @@ object BaumWelchAlgorithm {
       betaprime(::, t + 1) := normalize(betaprime(::, t + 1), 1.0)
 
       (0 until M).foreach(j =>
-        (0 until M).foreach(i => beta(j, t) = beta(j, t) + funA(j, i) * betaprime(i, t + 1)))
-      beta(::, t) := normalize(beta(::, t + 1), 1.0)
+        (0 until M).foreach(i => if (i != j) beta(j, t) = beta(j, t) + funA(j, i) * betaprime(i, t + 1)))
+      beta(::, t) := normalize(beta(::, t), 1.0)
     }
 
     /**
@@ -340,6 +335,7 @@ object BaumWelchAlgorithm {
             matrixn(t)(i, d) = alphaprime(i, t - d + 1) * funP(i, d) * matrixu(t)(i, d) * beta(i, t))
         //**
         matrixn(t)(i, ::) := normalize(matrixn(t)(i, ::).t, 1.0).t
+        //matrixn(t) := Utils.normalise(matrixn(t))
       }))
 
     /**
@@ -353,6 +349,7 @@ object BaumWelchAlgorithm {
         (0 until M).foreach(j => matrixi(t)(i, j) = alpha(i, t) * funA(i, j) * betaprime(j, t + 1)))
       //**
       matrixi(t) = Utils.mkstochastic(matrixi(t))
+      //matrixi(t) = Utils.normalise(matrixi(t))
     })
 
     /**
@@ -461,6 +458,7 @@ object BaumWelchAlgorithm {
     (0 until T).foreach(t =>
       (0 until M).foreach(j =>
         (1 until D).foreach(d =>
+          //(1 to t + 1).foreach(d =>
           if (d - 1 > -1 && t - d + 1 > -1)
             matrixu(t)(j, d) = matrixu(t)(j, d - 1) * funObslik(j, t - d + 1))))
 
@@ -479,7 +477,7 @@ object BaumWelchAlgorithm {
             alpha(j, t) = alpha(j, t) + (alphaprime(j, t - d + 1) * funP(j, d) * matrixu(t)(j, d))))
       alpha(::, t) := Utils.normalise(alpha(::, t), scale, t)
       (0 until M).foreach(j =>
-        (0 until M).foreach(i => alphaprime(j, t + 1) = alphaprime(j, t + 1) + alpha(i, t) * funA(i, j)))
+        (0 until M).foreach(i => if (i != j) alphaprime(j, t + 1) = alphaprime(j, t + 1) + alpha(i, t) * funA(i, j)))
       alphaprime(::, t + 1) := normalize(alphaprime(::, t + 1), 1.0)
     })
 
