@@ -49,7 +49,7 @@ object BaumWelchAlgorithm {
       .withColumn("T", udf_obssize(col("obs")))
 
     breakable {
-      (0 until maxIterations).foreach(it => {
+      (inInter until maxIterations).foreach(it => {
         log.info("-----------------------------------------------------------------------------------------")
         log.info("Start Iteration: " + it)
         val newvalues = obstrained.repartition(numPartitions)
@@ -70,16 +70,13 @@ object BaumWelchAlgorithm {
 
         val loglik = newvalues.getAs[Double](0)
         log.info("LogLikehood Value: " + loglik)
+
         prior = normalize(new DenseVector(newvalues.getAs[Seq[Double]](1).toArray) :+= Math.pow(2, -52), 1.0)
-        transmat = Utils.mkstochastic(new DenseMatrix(M, M, newvalues.getAs[Seq[Double]](2).toArray))
-        obsmat = Utils.mkstochastic(new DenseMatrix(M, k, newvalues.getAs[Seq[Double]](3).toArray))
-        durmat = Utils.mkstochastic(new DenseMatrix(M, D, newvalues.getAs[Seq[Double]](4).toArray))
+        transmat = Utils.mkstochastic(new DenseMatrix(M, M, newvalues.getAs[Seq[Double]](2).toArray) :+= Math.pow(2, -52))
+        obsmat = Utils.mkstochastic(new DenseMatrix(M, k, newvalues.getAs[Seq[Double]](3).toArray) :+= Math.pow(2, -52))
+        durmat = Utils.normalise(new DenseMatrix(M, D, newvalues.getAs[Seq[Double]](4).toArray) :+= Math.pow(2, -52))
         hsmm.Utils.writeresult(path_Class_baumwelch + kfold,
-          kfold + ";" +
-            it + ";" +
-            M + ";" +
-            k + ";" +
-            D + ";" +
+          kfold + ";" + it + ";" + M + ";" + k + ";" + D + ";" +
             prior.toArray.mkString(",") + ";" +
             transmat.toArray.mkString(",") + ";" +
             obsmat.toArray.mkString(",") + ";" +
@@ -177,7 +174,7 @@ object BaumWelchAlgorithm {
     val alpha: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
     val alphaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T + 1)
 
-    alphaprime(::, 0) := normalize(funPi :+= Math.pow(2, -52), 1.0)
+    alphaprime(::, 0) := normalize(funPi, 1.0)
 
     (0 until T).foreach(t => {
 
@@ -191,7 +188,7 @@ object BaumWelchAlgorithm {
       (0 until M).foreach(j =>
         (0 until M).foreach(i => if (i != j) alphaprime(j, t + 1) = alphaprime(j, t + 1) + alpha(i, t) * funA(i, j)))
 
-      alphaprime(::, t + 1) := normalize(alphaprime(::, t + 1) :+= Math.pow(2, -52), 1.0)
+      alphaprime(::, t + 1) := normalize(alphaprime(::, t + 1), 1.0)
     })
 
     val loglik: Double = sum(scale.map(Math.log))
@@ -211,12 +208,12 @@ object BaumWelchAlgorithm {
           if (t + d < T)
             betaprime(j, t + 1) = betaprime(j, t + 1) + funP(j, d) * matrixu(t + d)(j, d) * beta(j, t + d)))
 
-      betaprime(::, t + 1) := normalize(betaprime(::, t + 1) :+= Math.pow(2, -52), 1.0)
+      betaprime(::, t + 1) := normalize(betaprime(::, t + 1), 1.0)
 
       (0 until M).foreach(j =>
         (0 until M).foreach(i => if (i != j) beta(j, t) = beta(j, t) + funA(j, i) * betaprime(i, t + 1)))
 
-      beta(::, t) := normalize(beta(::, t) :+= Math.pow(2, -52), 1.0)
+      beta(::, t) := normalize(beta(::, t), 1.0)
     }
 
     /**
@@ -227,15 +224,12 @@ object BaumWelchAlgorithm {
     val matrixn: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
       DenseMatrix.zeros[Double](M, D)
     }
+
     (0 until T).foreach(t =>
-      (0 until M).foreach(i => {
+      (0 until M).foreach(i =>
         (0 until D).foreach(d =>
           if (t - d + 1 > -1 && t - d + 1 < T + 1)
-            matrixn(t)(i, d) = alphaprime(i, t - d + 1) * funP(i, d) * matrixu(t)(i, d) * beta(i, t))
-        //**
-        matrixn(t)(i, ::) := normalize(matrixn(t)(i, ::).t :+= Math.pow(2, -52), 1.0).t
-        //matrixn(t) := Utils.normalise(matrixn(t))
-      }))
+            matrixn(t)(i, d) = alphaprime(i, t - d + 1) * funP(i, d) * matrixu(t)(i, d) * beta(i, t))))
 
     /**
       * Matrix xi(t,i,j)
@@ -249,9 +243,7 @@ object BaumWelchAlgorithm {
     (0 until T).foreach(t => {
       (0 until M).foreach(i =>
         (0 until M).foreach(j => matrixi(t)(i, j) = alpha(i, t) * funA(i, j) * betaprime(j, t + 1)))
-      //**
-      matrixi(t) = Utils.mkstochastic(matrixi(t))
-      //matrixi(t) = Utils.normalise(matrixi(t))
+      matrixi(t) = Utils.normalise(matrixi(t))
     })
 
     /**
@@ -262,15 +254,12 @@ object BaumWelchAlgorithm {
     val matrixg: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
 
     (0 until M).foreach(i => matrixg(i, 0) = funPi(i) * betaprime(i, 0))
-    matrixg(::, 0) := normalize(matrixg(::, 0) :+= Math.pow(2, -52), 1.0)
 
-    (1 until T - 1).foreach(t => {
-      (0 until M).foreach(i => matrixg(i, t) = matrixg(i, t - 1) + alphaprime(i, t) * betaprime(i, t) - alpha(i, t - 1) * beta(i, t - 1))
-      matrixg(::, t) := normalize(matrixg(::, t) :+= Math.pow(2, -52), 1.0)
-    })
+    (1 until T - 1).foreach(t =>
+      (0 until M).foreach(i =>
+        matrixg(i, t) = matrixg(i, t - 1) + alphaprime(i, t) * betaprime(i, t) - alpha(i, t - 1) * beta(i, t - 1)))
 
     (0 until M).foreach(i => matrixg(i, T - 1) = alpha(i, T - 1))
-    matrixg(::, T - 1) := normalize(matrixg(::, T - 1) :+= Math.pow(2, -52), 1.0)
 
     /**
       * Matrix newA, estimation of a(i,j)
@@ -315,16 +304,15 @@ object BaumWelchAlgorithm {
       * Section -> 5.1.1
       */
     val newP = DenseMatrix.zeros[Double](M, D)
-    (0 until M).foreach(i => {
+    (0 until M).foreach(i =>
       (0 until D).foreach(d => {
         var num = 0.0
         (0 until T).foreach(t => num = num + matrixn(t)(i, d))
         var den = 0.0
         (0 until D).foreach(d2 => (0 until T).foreach(t => den = den + matrixn(t)(i, d2)))
         newP(i, d) = num / den
-      })
-      newP(i, ::) := normalize(newP(i, ::).t :+= Math.pow(2, -52), 1.0).t
-    })
+      }))
+    newP := Utils.normalise(newP :+= Math.pow(2, -52))
 
     /**
       * Matriz newPi, estimation of pi(i)
@@ -386,7 +374,7 @@ object BaumWelchAlgorithm {
     val alpha: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
     val alphaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T + 1)
 
-    alphaprime(::, 0) := normalize(funPi :+= Math.pow(2, -52), 1.0)
+    alphaprime(::, 0) := normalize(funPi, 1.0)
 
     (0 until T).foreach(t => {
 
@@ -400,7 +388,7 @@ object BaumWelchAlgorithm {
       (0 until M).foreach(j =>
         (0 until M).foreach(i => if (i != j) alphaprime(j, t + 1) = alphaprime(j, t + 1) + alpha(i, t) * funA(i, j)))
 
-      alphaprime(::, t + 1) := normalize(alphaprime(::, t + 1) :+= Math.pow(2, -52), 1.0)
+      alphaprime(::, t + 1) := normalize(alphaprime(::, t + 1), 1.0)
     })
 
     val loglik: Double = sum(scale.map(Math.log))

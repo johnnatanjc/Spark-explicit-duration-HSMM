@@ -139,7 +139,7 @@ object CrossValidation {
           normalize(DenseVector.rand(value_M) :+= Math.pow(2, -52), 1.0),
           hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_M) :+= Math.pow(2, -52)),
           hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_k) :+= Math.pow(2, -52)),
-          hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_D) :+= Math.pow(2, -52)),
+          hsmm.Utils.normalise(DenseMatrix.rand(value_M, value_D) :+= Math.pow(2, -52)),
           number_partitions, value_epsilon, max_num_iterations,
           inter, applicationProps.getProperty("path_result_Class1_models_baumwelch"))
         modelClass1 = (tmpModelClass1._1.toArray, tmpModelClass1._2.toArray, tmpModelClass1._3.toArray, tmpModelClass1._4.toArray)
@@ -172,7 +172,7 @@ object CrossValidation {
           normalize(DenseVector.rand(value_M) :+= Math.pow(2, -52), 1.0),
           hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_M) :+= Math.pow(2, -52)),
           hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_k) :+= Math.pow(2, -52)),
-          hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_D) :+= Math.pow(2, -52)),
+          hsmm.Utils.normalise(DenseMatrix.rand(value_M, value_D) :+= Math.pow(2, -52)),
           number_partitions, value_epsilon, max_num_iterations,
           inter, applicationProps.getProperty("path_result_Class0_models_baumwelch"))
         modelClass0 = (tmpModelClass0._1.toArray, tmpModelClass0._2.toArray, tmpModelClass0._3.toArray, tmpModelClass0._4.toArray)
