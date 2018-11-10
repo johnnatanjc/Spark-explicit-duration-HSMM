@@ -11,15 +11,20 @@ object Utils {
     if ((delta_loglik / avg_loglik) < threshold) true else false
   }
 
-  def normalise(input: DenseMatrix[Double]): DenseMatrix[Double] = input :*= 1 / sum(input)
+  def normalise(input: DenseMatrix[Double]): DenseMatrix[Double] = {
+    input :+= Math.pow(2, -52)
+    input :*= 1 / sum(input)
+  }
 
   def normalise(input: DenseVector[Double], inscale: DenseVector[Double], index: Int): DenseVector[Double] = {
+    input :+= Math.pow(2, -52)
     val rsum = sum(input)
     inscale(index) = rsum
-    if (rsum == 0) input else input :*= 1 / rsum
+    input :*= 1 / rsum
   }
 
   def mkstochastic(input: DenseMatrix[Double]): DenseMatrix[Double] = {
+    input :+= Math.pow(2, -52)
     (0 until input.rows).foreach(i => input(i, ::) := normalize(input(i, ::).t, 1.0).t)
     input
   }
