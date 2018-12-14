@@ -197,7 +197,7 @@ object BaumWelchAlgorithm {
       * Backwards variables
       * el beta en la posición cero es cero, why?
       */
-    val beta: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T)
+    val beta: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T + 1)
     val betaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T + 1)
 
     beta(::, T - 1) := 1.0
