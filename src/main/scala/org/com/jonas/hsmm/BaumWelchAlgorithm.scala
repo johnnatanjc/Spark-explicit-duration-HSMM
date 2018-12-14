@@ -182,7 +182,7 @@ object BaumWelchAlgorithm {
       alpha(::, t) := Utils.normalise(alpha(::, t), scale, t)
 
       (0 until M).foreach(j =>
-        (0 until M).foreach(i => alphaprime(j, t + 1) = alphaprime(j, t + 1) + alpha(i, t) * funA(i, j)))
+        (0 until M).foreach(i => if (i != j) alphaprime(j, t + 1) = alphaprime(j, t + 1) + alpha(i, t) * funA(i, j)))
 
       alphaprime(::, t + 1) := normalize(alphaprime(::, t + 1), 1.0)
     })
@@ -220,7 +220,7 @@ object BaumWelchAlgorithm {
       betaprime(::, t + 1) := normalize(betaprime(::, t + 1), 1.0)
 
       (0 until M).foreach(j =>
-        (0 until M).foreach(i => beta(j, t) = beta(j, t) + funA(j, i) * betaprime(i, t + 1)))
+        (0 until M).foreach(i => if (i != j) beta(j, t) = beta(j, t) + funA(j, i) * betaprime(i, t + 1)))
 
       beta(::, t) := normalize(beta(::, t), 1.0)
     }
@@ -344,13 +344,13 @@ object BaumWelchAlgorithm {
     val funObslik: DenseMatrix[Double] = new DenseMatrix(M, T, obslik.toArray)
 
     /**
-      * Matriz u(t,j,d)
+      * Matriz u(t,j,d), (5.9)
       */
     val matrixu: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
       DenseMatrix.zeros[Double](M, D)
     }
 
-    /** * optimizar unificando **/
+    /** * valores iniciales **/
     (0 until T).foreach(t =>
       (0 until M).foreach(j => matrixu(t)(j, 0) = funObslik(j, t)))
 
@@ -368,14 +368,18 @@ object BaumWelchAlgorithm {
     val alphaprime: DenseMatrix[Double] = DenseMatrix.zeros[Double](M, T + 1)
 
     alphaprime(::, 0) := normalize(funPi, 1.0)
+
     (0 until T).foreach(t => {
       (0 until M).foreach(j =>
         (0 until D).foreach(d =>
           if (t - d + 1 > -1 && t - d + 1 < T + 1)
             alpha(j, t) = alpha(j, t) + (alphaprime(j, t - d + 1) * funP(j, d) * matrixu(t)(j, d))))
+
       alpha(::, t) := Utils.normalise(alpha(::, t), scale, t)
+
       (0 until M).foreach(j =>
         (0 until M).foreach(i => alphaprime(j, t + 1) = alphaprime(j, t + 1) + alpha(i, t) * funA(i, j)))
+
       alphaprime(::, t + 1) := normalize(alphaprime(::, t + 1), 1.0)
     })
 
