@@ -49,7 +49,7 @@ object BaumWelchAlgorithm {
       .withColumn("T", udf_obssize(col("obs")))
 
     breakable {
-      (0 until maxIterations).foreach(it => {
+      (inInter until maxIterations).foreach(it => {
         log.info("-----------------------------------------------------------------------------------------")
         log.info("Start Iteration: " + it)
         val newvalues = obstrained.repartition(numPartitions)
@@ -229,7 +229,7 @@ object BaumWelchAlgorithm {
       * Matriz n(t,i,d)
       */
     val matrixn: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
-      DenseMatrix.ones[Double](M, D)
+      DenseMatrix.zeros[Double](M, D)
     }
     (0 until T).foreach(t =>
       (0 until M).foreach(i => {
@@ -243,7 +243,7 @@ object BaumWelchAlgorithm {
       * Matriz xi(t,i,j)
       */
     val matrixi: DenseVector[DenseMatrix[Double]] = DenseVector.fill(T) {
-      DenseMatrix.ones[Double](M, M)
+      DenseMatrix.zeros[Double](M, M)
     }
     (0 until T).foreach(t => {
       (0 until M).foreach(i =>
