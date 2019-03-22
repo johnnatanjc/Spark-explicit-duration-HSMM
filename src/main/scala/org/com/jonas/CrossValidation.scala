@@ -136,16 +136,18 @@ object CrossValidation {
         log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         log.info("Start training Class 1")
         val tmpModelClass1 = hsmm.BaumWelchAlgorithm.run1(trainClass1, value_M, value_k, value_D,
+          /*
           normalize(DenseVector.rand(value_M) :+= Math.pow(2, -52), 1.0),
           hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_M) :+= Math.pow(2, -52)),
           hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_k) :+= Math.pow(2, -52)),
           hsmm.Utils.normalise(DenseMatrix.rand(value_M, value_D) :+= Math.pow(2, -52)),
-          /*
+          */
           normalize(DenseVector.rand(value_M), 1.0),
           hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_M)),
           hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_k)),
-          hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_D)),
-          */
+          //hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_D)),
+          hsmm.Utils.normalise(DenseMatrix.rand(value_M, value_D)),
+
           number_partitions, value_epsilon, max_num_iterations,
           inter, applicationProps.getProperty("path_result_Class1_models_baumwelch"))
         modelClass1 = (tmpModelClass1._1.toArray, tmpModelClass1._2.toArray, tmpModelClass1._3.toArray, tmpModelClass1._4.toArray)
@@ -175,16 +177,18 @@ object CrossValidation {
         log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         log.info("Start training Class 0")
         val tmpModelClass0 = hsmm.BaumWelchAlgorithm.run1(trainClass0, value_M, value_k, value_D,
+          /*
           normalize(DenseVector.rand(value_M) :+= Math.pow(2, -52), 1.0),
           hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_M) :+= Math.pow(2, -52)),
           hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_k) :+= Math.pow(2, -52)),
           hsmm.Utils.normalise(DenseMatrix.rand(value_M, value_D) :+= Math.pow(2, -52)),
-          /*
+          */
           normalize(DenseVector.rand(value_M), 1.0),
           hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_M)),
           hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_k)),
-          hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_D)),
-          */
+          //hsmm.Utils.mkstochastic(DenseMatrix.rand(value_M, value_D)),
+          hsmm.Utils.normalise(DenseMatrix.rand(value_M, value_D)),
+
           number_partitions, value_epsilon, max_num_iterations,
           inter, applicationProps.getProperty("path_result_Class0_models_baumwelch"))
         modelClass0 = (tmpModelClass0._1.toArray, tmpModelClass0._2.toArray, tmpModelClass0._3.toArray, tmpModelClass0._4.toArray)
