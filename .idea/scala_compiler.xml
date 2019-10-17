@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ScalaCompilerConfiguration">
-    <profile name="sbt 1" modules="spark-hsmm_9968,spark-hsmm" />
+    <profile name="sbt 1" modules="Spark-HSMM,spark-hsmm,spark-hsmm_9968" />
   </component>
 </project>

@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/spark-hsmm.iml" filepath="$PROJECT_DIR$/.idea/modules/spark-hsmm.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/spark-hsmm-build.iml" filepath="$PROJECT_DIR$/.idea/modules/spark-hsmm-build.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Spark-HSMM.iml" filepath="$PROJECT_DIR$/.idea/modules/Spark-HSMM.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Spark-HSMM-build.iml" filepath="$PROJECT_DIR$/.idea/modules/Spark-HSMM-build.iml" />
     </modules>
   </component>
 </project>
