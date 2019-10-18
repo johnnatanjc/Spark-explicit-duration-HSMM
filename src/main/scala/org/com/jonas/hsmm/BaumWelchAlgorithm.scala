@@ -149,7 +149,7 @@ object BaumWelchAlgorithm {
       .withColumn("B", lit(initialB.toArray))
       .withColumn("P", lit(initialP.toArray))
       .withColumn("obs", udf_toarray(col("str_obs")))
-      .withColumn("T", lit(T))
+      .withColumn("T", udf_obssize_length(col("obs"), lit(T)))
       .withColumn("obslik", udf_multinomialprob(col("obs"), col("M"), col("k"), col("T"), col("B")))
       .withColumn("prob", udf_fwd(col("M"), col("D"), col("T"), col("Pi"), col("A"), col("P"), col("obslik")))
       .drop("str_obs", "M", "k", "D", "Pi", "A", "B", "P", "obs", "T", "obslik")
@@ -158,6 +158,13 @@ object BaumWelchAlgorithm {
   /** * udf functions ****/
   val udf_toarray: UserDefinedFunction = udf((s: String) => s.split(";").map(_.toInt))
   val udf_obssize: UserDefinedFunction = udf((s: Seq[Int]) => s.length)
+  val udf_obssize_length: UserDefinedFunction = udf((s: Seq[Int], t: Int) => {
+    if(s.length < t){
+      s.length
+    }else{
+      t
+    }
+  })
 
   /** * udf_multinomialprob ****/
   val udf_multinomialprob: UserDefinedFunction = udf((obs: Seq[Int], M: Int, k: Int, T: Int, B: Seq[Double]) => {

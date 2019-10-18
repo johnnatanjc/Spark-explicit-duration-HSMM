@@ -72,10 +72,13 @@ object CrossValidationWithLength {
     nClass0 = sampleClass0.count().toInt
     log.info("Value of nClass0: " + nClass0)
 
-    //inInter = scala.io.Source.fromFile(applicationProps.getProperty("path_result")).getLines.size - 1
+    inInter = scala.io.Source.fromFile(applicationProps.getProperty("path_result")).getLines.size - 1
 
     sampleClass1.persist()
     sampleClass0.persist()
+
+    var validClass1 = sparkSession.emptyDataFrame
+    var validClass0 = sparkSession.emptyDataFrame
 
     (inInter until k_folds).foreach(inter => {
       log.info("*****************************************************************************************")
@@ -85,9 +88,9 @@ object CrossValidationWithLength {
       //log.info("Getting data to train Class 0")
       //val trainClass0 = sampleClass0.where("kfold <> " + inter).drop("kfold", "rowId")
       log.info("Getting data to validate Class 1")
-      val validClass1 = sampleClass1.where("kfold == " + inter).drop("kfold", "rowId")
+      validClass1 = sampleClass1.where("kfold == " + inter).drop("kfold", "rowId")
       log.info("Getting data to validate Class 0")
-      val validClass0 = sampleClass0.where("kfold == " + inter).drop("kfold", "rowId")
+      validClass0 = sampleClass0.where("kfold == " + inter).drop("kfold", "rowId")
       log.info("*****************************************************************************************")
 
       var modelClass1 = (Array.empty[Double], Array.empty[Double], Array.empty[Double], Array.empty[Double])
@@ -113,35 +116,57 @@ object CrossValidationWithLength {
         arraymodel0(7).split(",").map(_.toDouble))
       log.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      val resultClass1 =
-        hsmm.BaumWelchAlgorithm.validateLength(validClass1, value_M, value_k, value_D, value_T,
-          new DenseVector(modelClass1._1), new DenseMatrix(value_M, value_M, modelClass1._2),
-          new DenseMatrix(value_M, value_k, modelClass1._3), new DenseMatrix(value_M, value_D, modelClass1._4))
-          .withColumnRenamed("prob", "probMod1").as("valMod1")
-          .join(
-            hsmm.BaumWelchAlgorithm.validateLength(validClass1, value_M, value_k, value_D, value_T,
-              new DenseVector(modelClass0._1), new DenseMatrix(value_M, value_M, modelClass0._2),
-              new DenseMatrix(value_M, value_k, modelClass0._3), new DenseMatrix(value_M, value_D, modelClass0._4))
-              .withColumnRenamed("prob", "probMod0").as("valMod0"),
-            col("valMod1.workitem") === col("valMod0.workitem"), "inner")
-          .select(col("valMod1.workitem").as("workitem"), col("probMod1"), col("probMod0"))
-      log.info("Saving result validation Class1")
-      resultClass1.write.format("com.databricks.spark.csv").save(applicationProps.getProperty("path_sample_Class1_kfold") + inter)
+      var resultClass1   = sparkSession.emptyDataFrame
+      var resultClass0   = sparkSession.emptyDataFrame
 
-      val resultClass0 =
-        hsmm.BaumWelchAlgorithm.validateLength(validClass0, value_M, value_k, value_D, value_T,
-          new DenseVector(modelClass1._1), new DenseMatrix(value_M, value_M, modelClass1._2),
-          new DenseMatrix(value_M, value_k, modelClass1._3), new DenseMatrix(value_M, value_D, modelClass1._4))
-          .withColumnRenamed("prob", "probMod1").as("valMod1")
-          .join(
-            hsmm.BaumWelchAlgorithm.validateLength(validClass0, value_M, value_k, value_D, value_T,
-              new DenseVector(modelClass0._1), new DenseMatrix(value_M, value_M, modelClass0._2),
-              new DenseMatrix(value_M, value_k, modelClass0._3), new DenseMatrix(value_M, value_D, modelClass0._4))
-              .withColumnRenamed("prob", "probMod0").as("valMod0"),
-            col("valMod1.workitem") === col("valMod0.workitem"), "inner")
-          .select(col("valMod1.workitem").as("workitem"), col("probMod1"), col("probMod0"))
-      log.info("Saving result validation Class0")
-      resultClass0.write.format("com.databricks.spark.csv").save(applicationProps.getProperty("path_sample_Class0_kfold") + inter)
+      if (new java.io.File(applicationProps.getProperty("path_sample_Class1_kfold") + inter).exists) {
+        log.info("Loading result validation Class1")
+        resultClass1 = sparkSession.read.csv(applicationProps.getProperty("path_sample_Class1_kfold") + inter)
+          .withColumnRenamed("_c0", "workitem")
+          .withColumnRenamed("_c1", "probMod1")
+          .withColumnRenamed("_c2", "probMod0")
+
+      }else{
+        resultClass1 =
+          hsmm.BaumWelchAlgorithm.validateLength(validClass1, value_M, value_k, value_D, value_T,
+            new DenseVector(modelClass1._1), new DenseMatrix(value_M, value_M, modelClass1._2),
+            new DenseMatrix(value_M, value_k, modelClass1._3), new DenseMatrix(value_M, value_D, modelClass1._4))
+            .withColumnRenamed("prob", "probMod1").as("valMod1")
+            .join(
+              hsmm.BaumWelchAlgorithm.validateLength(validClass1, value_M, value_k, value_D, value_T,
+                new DenseVector(modelClass0._1), new DenseMatrix(value_M, value_M, modelClass0._2),
+                new DenseMatrix(value_M, value_k, modelClass0._3), new DenseMatrix(value_M, value_D, modelClass0._4))
+                .withColumnRenamed("prob", "probMod0").as("valMod0"),
+              col("valMod1.workitem") === col("valMod0.workitem"), "inner")
+            .select(col("valMod1.workitem").as("workitem"), col("probMod1"), col("probMod0"))
+        log.info("Saving result validation Class1")
+        resultClass1.write.format("com.databricks.spark.csv").save(applicationProps.getProperty("path_sample_Class1_kfold") + inter)
+      }
+
+      if (new java.io.File(applicationProps.getProperty("path_sample_Class0_kfold") + inter).exists) {
+        log.info("Loading result validation Class0")
+        resultClass0 = sparkSession.read.csv(applicationProps.getProperty("path_sample_Class0_kfold") + inter)
+          .withColumnRenamed("_c0", "workitem")
+          .withColumnRenamed("_c1", "probMod1")
+          .withColumnRenamed("_c2", "probMod0")
+
+      }else{
+        resultClass0 =
+          hsmm.BaumWelchAlgorithm.validateLength(validClass0, value_M, value_k, value_D, value_T,
+            new DenseVector(modelClass1._1), new DenseMatrix(value_M, value_M, modelClass1._2),
+            new DenseMatrix(value_M, value_k, modelClass1._3), new DenseMatrix(value_M, value_D, modelClass1._4))
+            .withColumnRenamed("prob", "probMod1").as("valMod1")
+            .join(
+              hsmm.BaumWelchAlgorithm.validateLength(validClass0, value_M, value_k, value_D, value_T,
+                new DenseVector(modelClass0._1), new DenseMatrix(value_M, value_M, modelClass0._2),
+                new DenseMatrix(value_M, value_k, modelClass0._3), new DenseMatrix(value_M, value_D, modelClass0._4))
+                .withColumnRenamed("prob", "probMod0").as("valMod0"),
+              col("valMod1.workitem") === col("valMod0.workitem"), "inner")
+            .select(col("valMod1.workitem").as("workitem"), col("probMod1"), col("probMod0"))
+        log.info("Saving result validation Class0")
+        resultClass0.write.format("com.databricks.spark.csv").save(applicationProps.getProperty("path_sample_Class0_kfold") + inter)
+
+      }
 
       /** N value */
       log.info("Compute N")
@@ -190,10 +215,16 @@ object CrossValidationWithLength {
 
       //trainClass1.unpersist()
       //trainClass0.unpersist()
+      //validClass1.unpersist()
+      //validClass0.unpersist()
       validClass1.unpersist()
       validClass0.unpersist()
-      validClass1.unpersist()
-      validClass0.unpersist()
+
+      validClass1 = sparkSession.emptyDataFrame
+      validClass0 = sparkSession.emptyDataFrame
+
+      resultClass1 = sparkSession.emptyDataFrame
+      resultClass0 = sparkSession.emptyDataFrame
 
       log.info("*****************************************************************************************")
       hsmm.Utils.writeresult(applicationProps.getProperty("path_result"), N + "," + TP + "," + FP + "," + FN + "," + TN + "," + sensi + "," + speci + "," + effic + "," + error + "\n")
